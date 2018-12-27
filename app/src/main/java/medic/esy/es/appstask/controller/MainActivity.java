@@ -93,6 +93,12 @@ public class MainActivity extends AppCompatActivity {
         swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                  /////first clear cache ////////////////////
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .addNetworkInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
+                        .cache(null)
+                        .build();
+                /////////////load new Data//////////////////
                 loadJSON();
                 Toast.makeText(MainActivity.this, "Github Repository Refreshed", Toast.LENGTH_SHORT).show();
                 //////////////////////////////////////////////////
@@ -136,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
                         .addConverterFactory(GsonConverterFactory.create())
                         .client(getCahsing())
                         .build();
+                internalNotification();
             }
 
         service apiService = retrofit.create(service.class);
@@ -159,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
                             if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
                                 isscrolling = true;
                             }
-                            internalNotification();
+
                         }
                         @Override
                         public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -179,7 +186,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 @Override
                 public void onFailure(Call<List<item>> call, Throwable t) {
-                    Toast.makeText(MainActivity.this,t.getMessage(),Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -194,11 +200,9 @@ public class MainActivity extends AppCompatActivity {
    */
 
     private void internalNotification() {
-        /////Every one Hour get Notification from system that cash is cleared.
-        Intent i=new Intent(getApplicationContext(),NotificationReceiver.class);
-        PendingIntent pendingIntent=PendingIntent.getBroadcast(getApplicationContext(),100,i,PendingIntent.FLAG_UPDATE_CURRENT);
-        AlarmManager alarmManager= (AlarmManager) getSystemService(ALARM_SERVICE);
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,System.currentTimeMillis(),1000*60*60*60,pendingIntent);
+
+
+
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -206,6 +210,11 @@ public class MainActivity extends AppCompatActivity {
                         .addNetworkInterceptor(REWRITE_CACHE_CONTROL_INTERCEPTOR)
                         .cache(null)
                         .build();
+                /////Every one Hour get Notification from system that cash is cleared.
+                Intent i=new Intent(getApplicationContext(),NotificationReceiver.class);
+                PendingIntent pendingIntent=PendingIntent.getBroadcast(getApplicationContext(),100,i,PendingIntent.FLAG_UPDATE_CURRENT);
+                AlarmManager alarmManager= (AlarmManager) getSystemService(ALARM_SERVICE);
+                alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,System.currentTimeMillis(),1000*60*60*60,pendingIntent);
             }
         }, 1000*60*60*60);
 
@@ -261,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
         public okhttp3.Response intercept(Chain chain) throws IOException {
             okhttp3.Response originalResponse = chain.proceed(chain.request());
             if (check) {
-                int maxAge = 60; // read from cache for 1 minute
+                int maxAge = 60*24; // read from cache for 1 hour
                 return originalResponse.newBuilder()
                         .header("Cache-Control", "public, max-age=" + maxAge)
                         .build();
